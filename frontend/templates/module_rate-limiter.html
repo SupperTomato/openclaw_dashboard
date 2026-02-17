@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html><head><title>Rate-limiter</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body><nav class="topnav"><a href="/">← Back</a><h1>Rate-limiter</h1></nav>
+<main class="container"><p>{{.Description}}</p><div id="data">Loading...</div></main>
+<script>fetch('/api/modules/rate-limiter').then(r=>r.json()).then(d=>{document.getElementById('data').innerHTML='<pre>'+JSON.stringify(d,null,2)+'</pre>'}).catch(()=>{document.getElementById('data').innerHTML='<p>Module not running</p>'});</script>
+</body></html>

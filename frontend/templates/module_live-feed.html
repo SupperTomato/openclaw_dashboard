@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+<head><title>Live Feed</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body>
+<nav class="topnav"><a href="/">← Back</a><h1>Live Feed</h1></nav>
+<main class="container"><p>Real-time message stream</p><div id="feed">Loading...</div></main>
+<script>fetch('/api/module-proxy/live_feed/messages?count=50').then(r=>r.json()).then(d=>{document.getElementById('feed').innerHTML='<pre>'+JSON.stringify(d,null,2)+'</pre>'}).catch(()=>{document.getElementById('feed').innerHTML='<p>Module not running</p>'});</script>
+</body>
+</html>

@@ -1,241 +1,89 @@
-{{define "content"}}
-<div class="config-page">
-    <div class="section">
-        <div class="section-header">
-            <h2>Configuration Editor</h2>
-            <div class="section-actions">
-                {{if not .ReadOnly}}
-                <button class="btn btn-success" id="save-config-btn" onclick="saveConfig()">Save Changes</button>
-                <button class="btn btn-sm" onclick="resetConfig()">Reset</button>
-                {{else}}
-                <span class="badge badge-warning">Read-Only Mode</span>
-                {{end}}
-            </div>
-        </div>
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Configuration</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+	<nav class="topnav">
+		<a href="/">← Back to Dashboard</a>
+		<h1>Configuration</h1>
+	</nav>
 
-        <p class="config-help">
-            Edit your OpenClaw Dashboard settings below. Each setting has an explanation to help you understand what it does.
-            Changes take effect after saving. Some changes may require a module restart.
-        </p>
+	<main class="container">
+		<div class="config-section">
+			<h2>Dashboard Settings</h2>
+			<textarea id="config-editor" class="config-editor">{{.Config}}</textarea>
+			<div class="actions" style="margin-top: 16px;">
+				<button onclick="saveConfig()">Save</button>
+				<button onclick="resetConfig()">Reset</button>
+			</div>
+			<div id="status"></div>
+		</div>
 
-        <!-- View Toggle -->
-        <div class="view-toggle">
-            <button class="btn btn-sm active" id="btn-form-view" onclick="switchView('form')">Form View</button>
-            <button class="btn btn-sm" id="btn-raw-view" onclick="switchView('raw')">Raw JSON</button>
-        </div>
+		<div class="help-section" style="margin-top: 40px;">
+			<h3>Configuration Fields</h3>
+			<table class="help-table">
+				{{range .Descs}}
+				<tr>
+					<td><strong>{{.Lab}}</strong></td>
+					<td>{{.Text}}</td>
+				</tr>
+				{{end}}
+			</table>
+		</div>
+	</main>
 
-        <!-- Form View -->
-        <div id="form-view" class="config-form">
-            {{range .CategoryOrder}}
-            <details class="config-category" open>
-                <summary class="category-header">
-                    <span class="category-name">{{.}}</span>
-                    <span class="category-count">{{len (index $.Categories .)}}</span>
-                </summary>
-                <div class="category-fields">
-                    {{range index $.Categories .}}
-                    <div class="config-field" data-key="{{.Key}}">
-                        <div class="field-header">
-                            <label class="field-label" for="field-{{.Key}}">{{.Label}}</label>
-                            {{if .Warning}}
-                            <span class="field-warning" title="{{.Warning}}">&#9888;</span>
-                            {{end}}
-                        </div>
-                        <p class="field-description">{{.Description}}</p>
-                        <div class="field-input">
-                            {{if eq .Type "bool"}}
-                            <label class="toggle">
-                                <input type="checkbox" id="field-{{.Key}}" data-key="{{.Key}}" data-type="bool"
-                                    onchange="markChanged(this)" {{if not $.ReadOnly}}{{else}}disabled{{end}}>
-                                <span class="toggle-slider"></span>
-                            </label>
-                            {{else if eq .Type "int"}}
-                            <input type="number" id="field-{{.Key}}" data-key="{{.Key}}" data-type="int"
-                                class="input-field" onchange="markChanged(this)" {{if $.ReadOnly}}disabled{{end}}>
-                            {{else if eq .Type "float"}}
-                            <input type="number" step="0.01" id="field-{{.Key}}" data-key="{{.Key}}" data-type="float"
-                                class="input-field" onchange="markChanged(this)" {{if $.ReadOnly}}disabled{{end}}>
-                            {{else if eq .Type "array"}}
-                            <textarea id="field-{{.Key}}" data-key="{{.Key}}" data-type="array"
-                                class="input-field input-textarea" onchange="markChanged(this)"
-                                placeholder="One item per line" {{if $.ReadOnly}}disabled{{end}}></textarea>
-                            <span class="field-hint">Enter one item per line</span>
-                            {{else}}
-                            <input type="text" id="field-{{.Key}}" data-key="{{.Key}}" data-type="string"
-                                class="input-field" onchange="markChanged(this)" {{if $.ReadOnly}}disabled{{end}}>
-                            {{end}}
-                        </div>
-                    </div>
-                    {{end}}
-                </div>
-            </details>
-            {{end}}
-        </div>
+	<script>
+	function saveConfig() {
+		var txt = document.getElementById('config-editor').value;
+		try {
+			JSON.parse(txt);
+		} catch(e) {
+			alert('Invalid JSON: ' + e.message);
+			return;
+		}
+		fetch('/api/config/save', {
+			method: 'POST',
+			headers: {'Content-Type': 'application/json'},
+			body: txt
+		})
+		.then(r => r.json())
+		.then(d => {
+			var el = document.getElementById('status');
+			if (d.ok) {
+				el.innerHTML = '<p style="color: green;">✓ Saved</p>';
+				setTimeout(() => el.innerHTML = '', 3000);
+			} else {
+				el.innerHTML = '<p style="color: red;">✗ Error: ' + (d.err || 'Unknown error') + '</p>';
+			}
+		});
+	}
 
-        <!-- Raw JSON View -->
-        <div id="raw-view" class="config-raw" style="display:none">
-            <textarea id="raw-config" class="raw-editor" spellcheck="false" {{if .ReadOnly}}disabled{{end}}>{{.ConfigRaw}}</textarea>
-            <div id="json-error" class="json-error" style="display:none"></div>
-        </div>
+	function resetConfig() {
+		if (confirm('Reload config from file?')) {
+			location.reload();
+		}
+	}
+	</script>
 
-        <!-- Save feedback -->
-        <div id="save-feedback" class="save-feedback" style="display:none"></div>
-    </div>
-</div>
-
-<script>
-// Parse config and populate form fields
-(function() {
-    try {
-        var config = JSON.parse(document.getElementById('raw-config').value);
-        populateForm(config);
-    } catch(e) {
-        console.error('Failed to parse config:', e);
-    }
-})();
-
-function populateForm(config) {
-    var fields = document.querySelectorAll('[data-key]');
-    fields.forEach(function(field) {
-        var key = field.getAttribute('data-key');
-        var type = field.getAttribute('data-type');
-        var value = getNestedValue(config, key);
-
-        if (value === undefined || value === null) return;
-
-        if (type === 'bool') {
-            field.checked = value;
-        } else if (type === 'array') {
-            field.value = Array.isArray(value) ? value.join('\n') : String(value);
-        } else {
-            field.value = value;
-        }
-    });
-}
-
-function getNestedValue(obj, path) {
-    return path.split('.').reduce(function(o, k) {
-        return o && o[k];
-    }, obj);
-}
-
-function setNestedValue(obj, path, value) {
-    var parts = path.split('.');
-    var current = obj;
-    for (var i = 0; i < parts.length - 1; i++) {
-        if (!current[parts[i]]) current[parts[i]] = {};
-        current = current[parts[i]];
-    }
-    current[parts[parts.length - 1]] = value;
-}
-
-function markChanged(el) {
-    el.closest('.config-field').classList.add('changed');
-    document.getElementById('save-config-btn').classList.add('has-changes');
-}
-
-function switchView(view) {
-    document.getElementById('form-view').style.display = view === 'form' ? 'block' : 'none';
-    document.getElementById('raw-view').style.display = view === 'raw' ? 'block' : 'none';
-    document.getElementById('btn-form-view').classList.toggle('active', view === 'form');
-    document.getElementById('btn-raw-view').classList.toggle('active', view === 'raw');
-
-    if (view === 'raw') {
-        // Sync form values to raw JSON
-        var config = buildConfigFromForm();
-        document.getElementById('raw-config').value = JSON.stringify(config, null, 2);
-    } else {
-        // Sync raw JSON to form
-        try {
-            var config = JSON.parse(document.getElementById('raw-config').value);
-            populateForm(config);
-            document.getElementById('json-error').style.display = 'none';
-        } catch(e) {
-            document.getElementById('json-error').textContent = 'Invalid JSON: ' + e.message;
-            document.getElementById('json-error').style.display = 'block';
-        }
-    }
-}
-
-function buildConfigFromForm() {
-    try {
-        var config = JSON.parse(document.getElementById('raw-config').value);
-    } catch(e) {
-        config = {};
-    }
-
-    var fields = document.querySelectorAll('[data-key]');
-    fields.forEach(function(field) {
-        var key = field.getAttribute('data-key');
-        var type = field.getAttribute('data-type');
-        var value;
-
-        if (type === 'bool') {
-            value = field.checked;
-        } else if (type === 'int') {
-            value = parseInt(field.value, 10) || 0;
-        } else if (type === 'float') {
-            value = parseFloat(field.value) || 0;
-        } else if (type === 'array') {
-            value = field.value.split('\n').filter(function(s) { return s.trim() !== ''; });
-        } else {
-            value = field.value;
-        }
-
-        setNestedValue(config, key, value);
-    });
-
-    return config;
-}
-
-function saveConfig() {
-    var rawView = document.getElementById('raw-view').style.display !== 'none';
-    var config;
-
-    if (rawView) {
-        try {
-            config = JSON.parse(document.getElementById('raw-config').value);
-        } catch(e) {
-            showFeedback('Invalid JSON: ' + e.message, 'error');
-            return;
-        }
-    } else {
-        config = buildConfigFromForm();
-    }
-
-    fetch('/api/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
-    })
-    .then(function(resp) { return resp.json(); })
-    .then(function(data) {
-        if (data.success) {
-            showFeedback('Configuration saved successfully!', 'success');
-            document.querySelectorAll('.config-field.changed').forEach(function(el) {
-                el.classList.remove('changed');
-            });
-            document.getElementById('save-config-btn').classList.remove('has-changes');
-        } else {
-            showFeedback('Error: ' + data.error, 'error');
-        }
-    })
-    .catch(function(err) {
-        showFeedback('Failed to save: ' + err.message, 'error');
-    });
-}
-
-function resetConfig() {
-    if (!confirm('Reset all changes? This will reload the saved configuration.')) return;
-    window.location.reload();
-}
-
-function showFeedback(message, type) {
-    var el = document.getElementById('save-feedback');
-    el.textContent = message;
-    el.className = 'save-feedback ' + type;
-    el.style.display = 'block';
-    setTimeout(function() { el.style.display = 'none'; }, 5000);
-}
-</script>
-{{end}}
+	<style>
+		.config-editor {
+			width: 100%;
+			min-height: 300px;
+			font-family: monospace;
+			font-size: 12px;
+			padding: 12px;
+			border: 1px solid #30363d;
+			border-radius: 6px;
+			background: #0d1117;
+			color: #e6edf3;
+		}
+		.help-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+		.help-table td { padding: 8px; border-bottom: 1px solid #30363d; }
+		.help-table strong { color: #58a6ff; }
+	</style>
+</body>
+</html>

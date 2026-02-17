@@ -1,4 +1,56 @@
-{{define "content"}}
+<!DOCTYPE html>
+<html data-theme="{{.Theme}}">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{{.Title}}</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+	<nav class="topnav">
+		<h1>{{.Title}}</h1>
+		<div class="nav-links">
+			<a href="/">Dashboard</a>
+			<a href="/config">Config</a>
+		</div>
+	</nav>
+
+	<main class="container">
+		<h2>Modules</h2>
+		<div class="module-grid">
+			{{range .Modules}}
+			<div class="module-card {{.State}}">
+				<h3><a href="/module/{{.ID}}">{{.Name}}</a></h3>
+				<p>{{.Description}}</p>
+				<div class="module-status">
+					<span class="status {{.State}}">{{.State}}</span>
+					{{if .Uptime}}<span>Up: {{.Uptime}}</span>{{end}}
+					{{if .PID}}<span>PID: {{.PID}}</span>{{end}}
+				</div>
+				<div class="actions">
+					{{if eq .State "running"}}
+					<button onclick="ctrl('{{.ID}}', 'restart')">Restart</button>
+					<button onclick="ctrl('{{.ID}}', 'stop')">Stop</button>
+					{{else}}
+					<button onclick="ctrl('{{.ID}}', 'start')">Start</button>
+					{{end}}
+				</div>
+			</div>
+			{{end}}
+		</div>
+	</main>
+
+	<script>
+	function ctrl(id, action) {
+		fetch('/api/modules/' + id + '/' + action, {method: 'POST'})
+			.then(r => r.json())
+			.then(d => { if(d.ok) location.reload(); else alert('Error: ' + d.err); })
+			.catch(e => alert('Failed'));
+	}
+	</script>
+</body>
+</html>
+{{define "content"}}{{end}}
 <div class="dashboard">
     <!-- Module Status Overview -->
     <section class="section">

@@ -1,0 +1,36 @@
+{
+  "openclaw_root_dir": "",
+  "openclaw_user": "user",
+  "dashboard": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "title": "OpenClaw Dashboard",
+    "refresh_interval": 5,
+    "theme": "dark"
+  },
+  "modules": {
+    "system_health": {"enabled": true, "port": 9001},
+    "session_manager": {"enabled": true, "port": 9002},
+    "live_feed": {"enabled": true, "port": 9003},
+    "log_viewer": {"enabled": true, "port": 9004},
+    "file_manager": {"enabled": true, "port": 9005},
+    "cost_analyzer": {"enabled": true, "port": 9006},
+    "rate_limiter": {"enabled": true, "port": 9007},
+    "memory_viewer": {"enabled": true, "port": 9008},
+    "service_control": {"enabled": true, "port": 9009},
+    "cron_manager": {"enabled": true, "port": 9010}
+  },
+  "notifications": {
+    "enabled": true,
+    "browser_notifications": true
+  },
+  "security": {
+    "lan_only": true,
+    "allowed_networks": ["192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12"]
+  },
+  "advanced": {
+    "log_level": "info",
+    "max_module_restarts": 5,
+    "module_health_check_seconds": 10
+  }
+}
