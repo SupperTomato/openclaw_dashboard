@@ -17,128 +17,83 @@ import (
 )
 
 func main() {
-	configPath := flag.String("config", "", "Path to openclaw.config.json")
+	cfgPath := flag.String("config", "", "Config file path")
 	flag.Parse()
 
-	// Find config file
-	cfgPath := findConfigPath(*configPath)
-	log.Printf("[dashboard] Using config: %s", cfgPath)
-
-	// Load config
-	configMgr, err := config.NewConfigManager(cfgPath)
-	if err != nil {
-		log.Fatalf("[dashboard] Failed to load config: %v", err)
+	path := findConfig(*cfgPath)
+	if err := config.Load(path); err != nil {
+		log.Fatalf("Config load failed: %v", err)
 	}
 
-	cfg := configMgr.Get()
+	cfg := config.Get()
+	dirs := findDirs()
 
-	// Watch for config file changes
-	configMgr.StartFileWatcher(5 * time.Second)
+	log.Printf("[dash] Config: %s", path)
+	log.Printf("[dash] Static: %s, Templates: %s", dirs["static"], dirs["templates"])
 
-	// Determine paths
-	execPath, _ := os.Executable()
-	baseDir := filepath.Dir(filepath.Dir(filepath.Dir(execPath)))
-	if baseDir == "" || baseDir == "." {
-		baseDir, _ = os.Getwd()
-	}
+	modMgr := modules.NewManager(config.Get(), dirs["bin"])
+	router := api.NewRouter(dirs["static"], dirs["templates"])
 
-	// Check for frontend dirs relative to working directory
-	staticDir := findDir(baseDir, "frontend/public")
-	tmplDir := findDir(baseDir, "frontend/templates")
-	binDir := findDir(baseDir, "backend/bin")
-
-	log.Printf("[dashboard] Static dir: %s", staticDir)
-	log.Printf("[dashboard] Template dir: %s", tmplDir)
-	log.Printf("[dashboard] Module bin dir: %s", binDir)
-
-	// Create module manager
-	modMgr := modules.NewManager(configMgr, binDir)
-
-	// Set up router
-	router := api.NewRouter(configMgr, modMgr, staticDir, tmplDir)
-
-	// Start modules
 	modMgr.StartAll()
-	modMgr.StartHealthChecker(time.Duration(cfg.Advanced.ModuleHealthCheck) * time.Second)
+	modMgr.StartHealthChecker(time.Duration(cfg.Advanced.ModuleHealthCheckSec) * time.Second)
+	config.Watch()
 
-	// Start HTTP server
 	addr := fmt.Sprintf("%s:%d", cfg.Dashboard.Host, cfg.Dashboard.Port)
-	server := &http.Server{
-		Addr:         addr,
-		Handler:      router.Handler(),
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 0, // Disabled for SSE
-		IdleTimeout:  120 * time.Second,
-	}
+	srv := &http.Server{Addr: addr, Handler: router.Handler(modMgr, config.Get())}
 
-	// Graceful shutdown
 	go func() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
-
-		log.Println("[dashboard] Shutting down...")
 		modMgr.StopAll()
-		server.Close()
+		srv.Close()
 	}()
 
-	log.Printf("[dashboard] OpenClaw Dashboard starting on http://%s", addr)
-	log.Printf("[dashboard] Access from LAN: http://<your-ip>:%d", cfg.Dashboard.Port)
-
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatalf("[dashboard] Server error: %v", err)
+	log.Printf("[dash] Starting http://%s", addr)
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("[dash] Server error: %v", err)
 	}
-
-	log.Println("[dashboard] Shutdown complete")
 }
 
-func findConfigPath(explicit string) string {
+func findConfig(explicit string) string {
 	if explicit != "" {
 		return explicit
 	}
-
-	// Check common locations
 	candidates := []string{
-		"config/openclaw.config.json",
-		"../config/openclaw.config.json",
-		"../../config/openclaw.config.json",
-		filepath.Join(os.Getenv("HOME"), ".config/openclaw/openclaw.config.json"),
-		"/etc/openclaw/openclaw.config.json",
+		"config/dashboard.json",
+		"../config/dashboard.json",
+		"../../config/dashboard.json",
+		filepath.Join(os.Getenv("HOME"), ".config/openclaw/dashboard.json"),
 	}
-
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
 			return c
 		}
 	}
-
-	log.Fatal("[dashboard] Config file not found. Use --config flag to specify path.")
+	log.Fatal("Config file not found. Use --config flag.")
 	return ""
 }
 
-func findDir(baseDir, relPath string) string {
-	// Try relative to base dir
-	p := filepath.Join(baseDir, relPath)
-	if info, err := os.Stat(p); err == nil && info.IsDir() {
-		return p
-	}
-
-	// Try relative to cwd
+func findDirs() map[string]string {
 	cwd, _ := os.Getwd()
-	p = filepath.Join(cwd, relPath)
-	if info, err := os.Stat(p); err == nil && info.IsDir() {
-		return p
+	return map[string]string{
+		"static":    findDir(cwd, "frontend/public"),
+		"templates": findDir(cwd, "frontend/templates"),
+		"bin":       findDir(cwd, "backend/bin"),
 	}
+}
 
-	// Try going up
-	for _, prefix := range []string{".", "..", "../.."} {
-		p = filepath.Join(prefix, relPath)
+func findDir(base, rel string) string {
+	cwd, _ := os.Getwd()
+	paths := []string{
+		filepath.Join(base, rel),
+		filepath.Join(cwd, rel),
+		rel,
+	}
+	for _, p := range paths {
 		if info, err := os.Stat(p); err == nil && info.IsDir() {
-			abs, _ := filepath.Abs(p)
-			return abs
+			return p
 		}
 	}
-
-	// Return relative path as fallback
-	return filepath.Join(baseDir, relPath)
+	return rel
 }

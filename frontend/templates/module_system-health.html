@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>System Health</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+	<style>
+		.metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 20px 0; }
+		.metric { background: #161b22; padding: 16px; border-radius: 6px; }
+		.metric-label { color: #8b949e; font-size: 12px; }
+		.metric-value { font-size: 24px; font-weight: bold; color: #58a6ff; margin-top: 8px; }
+	</style>
+</head>
+<body>
+	<nav class="topnav">
+		<a href="/">← Back to Dashboard</a>
+		<h1>System Health</h1>
+	</nav>
+
+	<main class="container">
+		<div class="module-detail">
+			<h2>{{.Name}}</h2>
+			<p>{{.Description}}</p>
+
+			<div class="metrics" id="metrics">
+				<div class="metric">
+					<div class="metric-label">Loading...</div>
+				</div>
+			</div>
+
+			<div class="actions">
+				{{if eq .State "running"}}
+				<button onclick="ctrl('{{.ID}}', 'restart')">Restart</button>
+				<button onclick="ctrl('{{.ID}}', 'stop')">Stop</button>
+				{{else}}
+				<button onclick="ctrl('{{.ID}}', 'start')">Start</button>
+				{{end}}
+			</div>
+		</div>
+	</main>
+
+	<script>
+	function ctrl(id, action) {
+		fetch('/api/modules/' + id + '/' + action, {method: 'POST'})
+			.then(r => r.json())
+			.then(d => { if(!d.ok) alert('Error: ' + d.err); });
+	}
+
+	// Load system metrics
+	fetch('/api/module-proxy/system_health/metrics')
+		.then(r => r.json())
+		.then(m => {
+			document.getElementById('metrics').innerHTML = `
+				<div class="metric">
+					<div class="metric-label">CPU</div>
+					<div class="metric-value">${m.cpu_percent.toFixed(1)}%</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Memory</div>
+					<div class="metric-value">${m.mem_percent.toFixed(1)}%</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Disk</div>
+					<div class="metric-value">${m.disk_percent.toFixed(1)}%</div>
+				</div>
+				<div class="metric">
+					<div class="metric-label">Temperature</div>
+					<div class="metric-value">${m.temperature_celsius.toFixed(0)}°C</div>
+				</div>
+			`;
+		})
+		.catch(() => {
+			document.getElementById('metrics').innerHTML = '<p>Module not running</p>';
+		});
+	</script>
+</body>
+</html>

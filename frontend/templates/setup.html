@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>OpenClaw Dashboard - Setup</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+	<div class="setup-container">
+		<div class="setup-card">
+			<h1>OpenClaw Dashboard Setup</h1>
+			<p class="setup-intro">Welcome! Let's configure where your OpenClaw data is stored.</p>
+
+			<form method="POST" class="setup-form">
+				<div class="form-group">
+					<label for="root">OpenClaw Root Directory</label>
+					<input type="text" id="root" name="root" placeholder="/home/user/openclaw" required class="form-input">
+					<small>Full path to your OpenClaw installation directory</small>
+				</div>
+
+				<button type="submit" class="btn btn-primary">Continue</button>
+			</form>
+
+			<div class="setup-help">
+				<h3>Where is my OpenClaw directory?</h3>
+				<ul>
+					<li>Run: <code>ls -la ~/.openclaw</code></li>
+					<li>Or check your system for the "openclaw" folder</li>
+					<li>Common paths:
+						<ul>
+							<li>/home/user/openclaw</li>
+							<li>~/.openclaw</li>
+							<li>/opt/openclaw</li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

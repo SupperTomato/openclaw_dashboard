@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Cost Analyzer</title>
+	<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+	<nav class="topnav">
+		<a href="/">← Back to Dashboard</a>
+		<h1>Cost Analyzer</h1>
+	</nav>
+
+	<main class="container">
+		<div class="module-detail">
+			<h2>{{.Name}}</h2>
+			<p>{{.Description}}</p>
+			<div class="module-info">
+				<div class="info-row">
+					<span>Status:</span>
+					<span class="status {{.State}}">{{.State}}</span>
+				</div>
+				<div class="info-row">
+					<span>Port:</span>
+					<span>{{.Port}}</span>
+				</div>
+				{{if .Uptime}}
+				<div class="info-row">
+					<span>Uptime:</span>
+					<span>{{.Uptime}}</span>
+				</div>
+				{{end}}
+			</div>
+
+			<!-- Cost Analyzer Specific Content -->
+			<div class="cost-summary" id="cost-data">
+				<p>Loading cost data...</p>
+			</div>
+
+			<div class="actions">
+				{{if eq .State "running"}}
+				<button onclick="ctrl('{{.ID}}', 'restart')">Restart</button>
+				<button onclick="ctrl('{{.ID}}', 'stop')">Stop</button>
+				{{else}}
+				<button onclick="ctrl('{{.ID}}', 'start')">Start</button>
+				{{end}}
+			</div>
+		</div>
+	</main>
+
+	<script>
+	function ctrl(id, action) {
+		fetch('/api/modules/' + id + '/' + action, {method: 'POST'})
+			.then(r => r.json())
+			.then(d => { if(d.ok) location.reload(); else alert('Error: ' + d.err); });
+	}
+
+	// Load cost data from module
+	fetch('/api/modules/cost_analyzer')
+		.then(r => r.json())
+		.then(data => {
+			if (data && data.state === 'running') {
+				// Fetch actual cost summary from the module
+				fetch('/api/module-proxy/cost_analyzer/summary')
+					.then(r => r.json())
+					.then(summary => {
+						document.getElementById('cost-data').innerHTML = `
+							<h3>Spending Summary</h3>
+							<div class="cost-details">
+								<div class="cost-item">
+									<span>Total Cost:</span>
+									<span class="amount">$${summary.total_cost.toFixed(2)}</span>
+								</div>
+								<div class="cost-item">
+									<span>Budget Status:</span>
+									<span class="status-${summary.budget_status}">${summary.budget_status}</span>
+								</div>
+								<div class="cost-item">
+									<span>Total Tokens:</span>
+									<span>${(summary.total_input + summary.total_output).toLocaleString()}</span>
+								</div>
+							</div>
+						`;
+					});
+			}
+		});
+	</script>
+</body>
+</html>

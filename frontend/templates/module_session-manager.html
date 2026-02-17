@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Session Manager</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body>
+	<nav class="topnav"><a href="/">← Back</a><h1>Session Manager</h1></nav>
+	<main class="container">
+		<p>{{.Description}}</p>
+		<div id="content">Loading...</div>
+	</main>
+	<script>
+		fetch('/api/module-proxy/session_manager/sessions?count=20')
+			.then(r => r.json())
+			.then(d => {
+				var html = '<table><tr><th>Session</th><th>Status</th><th>Last Active</th></tr>';
+				d.forEach(s => html += '<tr><td>' + s.name + '</td><td>' + s.status + '</td><td>' + s.last_active + '</td></tr>');
+				html += '</table>';
+				document.getElementById('content').innerHTML = html;
+			})
+			.catch(() => document.getElementById('content').innerHTML = '<p>Module not running</p>');
+	</script>
+</body>
+</html>

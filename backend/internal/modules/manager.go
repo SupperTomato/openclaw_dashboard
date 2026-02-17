@@ -58,7 +58,6 @@ type Manager struct {
 	mu          sync.RWMutex
 	modules     map[string]*moduleInstance
 	definitions []ModuleDefinition
-	configMgr   *config.ConfigManager
 	binDir      string
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -80,14 +79,13 @@ type moduleInstance struct {
 }
 
 // NewManager creates a new module manager
-func NewManager(configMgr *config.ConfigManager, binDir string) *Manager {
+func NewManager(cfg *config.Config, binDir string) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 	m := &Manager{
-		modules:   make(map[string]*moduleInstance),
-		configMgr: configMgr,
-		binDir:    binDir,
-		ctx:       ctx,
-		cancel:    cancel,
+		modules: make(map[string]*moduleInstance),
+		binDir:  binDir,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 	m.registerDefaults()
 	return m
@@ -110,28 +108,27 @@ func (m *Manager) registerDefaults() {
 
 // StartAll starts all enabled modules
 func (m *Manager) StartAll() {
-	cfg := m.configMgr.Get()
-	advanced := cfg.Advanced
+	cfg := config.Get()
 
 	for _, def := range m.definitions {
-		modCfg := m.getModuleConfig(cfg, def.ID)
-		if modCfg == nil {
+		modConf, ok := cfg.Modules[def.ID]
+		if !ok {
 			continue
 		}
 
 		inst := &moduleInstance{
 			def:        def,
-			port:       modCfg.Port,
-			enabled:    modCfg.Enabled,
-			maxRestart: advanced.MaxModuleRestarts,
-			backoff:    advanced.RestartBackoff,
+			port:       modConf.Port,
+			enabled:    modConf.Enabled,
+			maxRestart: cfg.Advanced.MaxModuleRestarts,
+			backoff:    2,
 		}
 
 		m.mu.Lock()
 		m.modules[def.ID] = inst
 		m.mu.Unlock()
 
-		if modCfg.Enabled {
+		if modConf.Enabled {
 			go m.startModule(def.ID)
 		}
 	}
@@ -165,8 +162,9 @@ func (m *Manager) startModule(id string) {
 	inst.cancel = cancel
 	m.mu.Unlock()
 
-	cfg := m.configMgr.Get()
-	configJSON, _ := json.Marshal(m.getModuleConfig(cfg, id))
+	cfg := config.Get()
+	modConf := cfg.Modules[id]
+	configJSON, _ := json.Marshal(modConf)
 
 	cmd := exec.CommandContext(ctx, binPath)
 	cmd.Env = append(os.Environ(),
@@ -174,7 +172,7 @@ func (m *Manager) startModule(id string) {
 		fmt.Sprintf("MODULE_PORT=%d", inst.port),
 		fmt.Sprintf("MODULE_CONFIG=%s", string(configJSON)),
 		fmt.Sprintf("DASHBOARD_PORT=%d", cfg.Dashboard.Port),
-		fmt.Sprintf("CONFIG_PATH=%s", m.configMgr.Path()),
+		fmt.Sprintf("CONFIG_PATH=%s", config.Path()),
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -495,29 +493,3 @@ func (m *Manager) StartHealthChecker(interval time.Duration) {
 	}()
 }
 
-func (m *Manager) getModuleConfig(cfg *config.Config, id string) *config.ModuleConfig {
-	switch id {
-	case "system_health":
-		return &cfg.Modules.SystemHealth
-	case "session_manager":
-		return &cfg.Modules.SessionManager
-	case "live_feed":
-		return &cfg.Modules.LiveFeed
-	case "log_viewer":
-		return &cfg.Modules.LogViewer
-	case "file_manager":
-		return &cfg.Modules.FileManager
-	case "cost_analyzer":
-		return &cfg.Modules.CostAnalyzer
-	case "rate_limiter":
-		return &cfg.Modules.RateLimiter
-	case "memory_viewer":
-		return &cfg.Modules.MemoryViewer
-	case "service_control":
-		return &cfg.Modules.ServiceControl
-	case "cron_manager":
-		return &cfg.Modules.CronManager
-	default:
-		return nil
-	}
-}
