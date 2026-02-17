@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{.Theme}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+    <nav class="topnav">
+        <div class="nav-brand">
+            <span class="nav-logo">&#9881;</span>
+            <span class="nav-title">{{.Title}}</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link {{if eq .CurrentPage "dashboard"}}active{{end}}" accesskey="d">
+                <span class="nav-icon">&#9632;</span> Dashboard
+            </a>
+            <a href="/config" class="nav-link {{if eq .CurrentPage "config"}}active{{end}}" accesskey="c">
+                <span class="nav-icon">&#9881;</span> Config
+            </a>
+        </div>
+        <div class="nav-status" id="nav-status" hx-get="/partial/system" hx-trigger="every {{.Refresh}}s" hx-swap="innerHTML">
+            Loading...
+        </div>
+    </nav>
+
+    <main class="container">
+        {{template "content" .}}
+    </main>
+
+    <footer class="footer">
+        <span>OpenClaw Dashboard</span>
+        <span class="footer-sep">|</span>
+        <span>Press <kbd>?</kbd> for keyboard shortcuts</span>
+    </footer>
+
+    <!-- Keyboard shortcuts modal -->
+    <div id="shortcuts-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Keyboard Shortcuts</h3>
+                <button class="modal-close" onclick="document.getElementById('shortcuts-modal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="shortcuts-table">
+                    <tr><td><kbd>1</kbd>-<kbd>9</kbd></td><td>Jump to module by number</td></tr>
+                    <tr><td><kbd>d</kbd></td><td>Go to Dashboard</td></tr>
+                    <tr><td><kbd>c</kbd></td><td>Go to Config</td></tr>
+                    <tr><td><kbd>/</kbd></td><td>Focus search</td></tr>
+                    <tr><td><kbd>r</kbd></td><td>Refresh data</td></tr>
+                    <tr><td><kbd>Esc</kbd></td><td>Close modal / Clear search</td></tr>
+                    <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification toast area -->
+    <div id="toast-container" class="toast-container"></div>
+</body>
+</html>

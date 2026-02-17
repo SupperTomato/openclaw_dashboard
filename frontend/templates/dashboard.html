@@ -1,0 +1,87 @@
+{{define "content"}}
+<div class="dashboard">
+    <!-- Module Status Overview -->
+    <section class="section">
+        <div class="section-header">
+            <h2>Modules</h2>
+            <div class="section-actions">
+                <input type="text" id="module-search" class="search-input" placeholder="Search modules..." onkeyup="filterModules(this.value)">
+            </div>
+        </div>
+
+        <div id="module-grid" class="module-grid" hx-get="/partial/modules" hx-trigger="every {{.Refresh}}s" hx-swap="innerHTML">
+            {{range .Modules}}
+            <div class="module-card {{.State}}" data-module="{{.ID}}" data-name="{{.Name}}">
+                <div class="module-header">
+                    <div class="module-icon" data-icon="{{.Icon}}">
+                        {{if eq .Icon "activity"}}&#9829;{{end}}
+                        {{if eq .Icon "users"}}&#9823;{{end}}
+                        {{if eq .Icon "zap"}}&#9889;{{end}}
+                        {{if eq .Icon "file-text"}}&#9776;{{end}}
+                        {{if eq .Icon "folder"}}&#128193;{{end}}
+                        {{if eq .Icon "dollar-sign"}}${{end}}
+                        {{if eq .Icon "gauge"}}&#9201;{{end}}
+                        {{if eq .Icon "brain"}}&#9733;{{end}}
+                        {{if eq .Icon "settings"}}&#9881;{{end}}
+                        {{if eq .Icon "clock"}}&#9200;{{end}}
+                    </div>
+                    <div class="module-info">
+                        <h3 class="module-name">{{.Name}}</h3>
+                        <p class="module-desc">{{.Description}}</p>
+                    </div>
+                    <div class="module-status">
+                        <span class="status-badge {{.State}}">{{.State}}</span>
+                    </div>
+                </div>
+                <div class="module-details">
+                    {{if .Uptime}}<span class="detail">Uptime: {{.Uptime}}</span>{{end}}
+                    {{if .PID}}<span class="detail">PID: {{.PID}}</span>{{end}}
+                    {{if .Restarts}}<span class="detail">Restarts: {{.Restarts}}</span>{{end}}
+                    {{if .LastError}}<span class="detail error">Error: {{.LastError}}</span>{{end}}
+                </div>
+                <div class="module-actions">
+                    {{if eq .State "running"}}
+                        <button class="btn btn-sm btn-warning" hx-post="/api/modules/{{.ID}}/restart" hx-swap="none" hx-confirm="Restart {{.Name}}?">Restart</button>
+                        <button class="btn btn-sm btn-danger" hx-post="/api/modules/{{.ID}}/stop" hx-swap="none" hx-confirm="Stop {{.Name}}?">Stop</button>
+                    {{else if eq .State "stopped"}}
+                        <button class="btn btn-sm btn-success" hx-post="/api/modules/{{.ID}}/start" hx-swap="none">Start</button>
+                    {{else if eq .State "crashed"}}
+                        <button class="btn btn-sm btn-success" hx-post="/api/modules/{{.ID}}/start" hx-swap="none">Restart</button>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </section>
+
+    <!-- Quick System Info -->
+    <section class="section">
+        <div class="section-header">
+            <h2>System Overview</h2>
+        </div>
+        <div id="system-info" class="system-cards">
+            <div class="sys-card">
+                <span class="sys-label">Dashboard Uptime</span>
+                <span class="sys-value" id="sys-uptime">{{.Uptime}}</span>
+            </div>
+            <div class="sys-card">
+                <span class="sys-label">Active Modules</span>
+                <span class="sys-value" id="sys-modules">
+                    {{range .Modules}}{{if eq .State "running"}}+{{end}}{{end}}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module Detail Panel (shown when clicking a module) -->
+    <section id="module-detail" class="section" style="display:none">
+        <div class="section-header">
+            <h2 id="detail-title">Module Details</h2>
+            <button class="btn btn-sm" onclick="document.getElementById('module-detail').style.display='none'">Close</button>
+        </div>
+        <div id="detail-content">
+            <!-- Filled by htmx -->
+        </div>
+    </section>
+</div>
+{{end}}

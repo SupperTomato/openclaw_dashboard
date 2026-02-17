@@ -1,0 +1,40 @@
+<div class="detail-panel">
+    <div class="detail-row">
+        <span class="detail-label">Module ID</span>
+        <span class="detail-value">{{.Module.ID}}</span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value"><span class="status-badge {{.Module.State}}">{{.Module.State}}</span></span>
+    </div>
+    <div class="detail-row">
+        <span class="detail-label">Port</span>
+        <span class="detail-value">{{.Module.Port}}</span>
+    </div>
+    {{if .Module.PID}}
+    <div class="detail-row">
+        <span class="detail-label">Process ID</span>
+        <span class="detail-value">{{.Module.PID}}</span>
+    </div>
+    {{end}}
+    {{if .Module.Uptime}}
+    <div class="detail-row">
+        <span class="detail-label">Uptime</span>
+        <span class="detail-value">{{.Module.Uptime}}</span>
+    </div>
+    {{end}}
+    <div class="detail-row">
+        <span class="detail-label">Restarts</span>
+        <span class="detail-value">{{.Module.Restarts}}</span>
+    </div>
+    {{if .Module.LastError}}
+    <div class="detail-row">
+        <span class="detail-label">Last Error</span>
+        <span class="detail-value error">{{.Module.LastError}}</span>
+    </div>
+    {{end}}
+    <div class="detail-row">
+        <span class="detail-label">Description</span>
+        <span class="detail-value">{{.Module.Description}}</span>
+    </div>
+</div>
