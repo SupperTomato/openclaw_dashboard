@@ -1,0 +1,99 @@
+{
+  "dashboard": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "title": "OpenClaw Dashboard",
+    "refresh_interval": 5,
+    "theme": "dark",
+    "language": "en"
+  },
+  "modules": {
+    "system_health": {
+      "enabled": true,
+      "port": 9001,
+      "refresh_interval": 3,
+      "history_hours": 24,
+      "temp_warning_celsius": 70,
+      "temp_critical_celsius": 85
+    },
+    "session_manager": {
+      "enabled": true,
+      "port": 9002,
+      "sessions_dir": "~/.claude/projects",
+      "max_sessions_display": 100
+    },
+    "live_feed": {
+      "enabled": true,
+      "port": 9003,
+      "max_messages": 500,
+      "auto_scroll": true
+    },
+    "log_viewer": {
+      "enabled": true,
+      "port": 9004,
+      "log_paths": ["/var/log/syslog", "/var/log/openclaw.log"],
+      "max_lines": 1000,
+      "follow": true
+    },
+    "file_manager": {
+      "enabled": true,
+      "port": 9005,
+      "root_dir": "~",
+      "allowed_extensions": [".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".cfg", ".conf", ".log", ".sh", ".py", ".js", ".go"],
+      "max_file_size_kb": 1024,
+      "show_hidden": false
+    },
+    "cost_analyzer": {
+      "enabled": true,
+      "port": 9006,
+      "currency": "USD",
+      "budget_warning": 50.0,
+      "budget_critical": 100.0
+    },
+    "rate_limiter": {
+      "enabled": true,
+      "port": 9007,
+      "window_hours": 5,
+      "warning_percent": 80
+    },
+    "memory_viewer": {
+      "enabled": true,
+      "port": 9008,
+      "memory_dir": "~/.claude",
+      "watch_files": ["MEMORY.md", "HEARTBEAT.md"]
+    },
+    "service_control": {
+      "enabled": true,
+      "port": 9009,
+      "services": ["openclaw", "openclaw-dashboard"],
+      "allow_restart": true,
+      "allow_stop": false
+    },
+    "cron_manager": {
+      "enabled": true,
+      "port": 9010,
+      "allow_edit": true,
+      "allow_trigger": true
+    }
+  },
+  "notifications": {
+    "enabled": true,
+    "browser_notifications": true,
+    "rate_limit_warning": true,
+    "budget_warning": true,
+    "service_down_alert": true
+  },
+  "security": {
+    "lan_only": true,
+    "allowed_networks": ["192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12"],
+    "readonly_mode": false
+  },
+  "advanced": {
+    "log_level": "info",
+    "max_module_restarts": 5,
+    "restart_backoff_seconds": 2,
+    "sse_keepalive_seconds": 30,
+    "module_health_check_seconds": 10,
+    "data_retention_days": 30
+  }
+}
